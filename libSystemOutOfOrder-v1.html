@@ -135,6 +135,17 @@ tests({
     eq(returnedLibrary, 'Gordon works at Watch and Code');
   },
 
+  'It should only run the callback function for each library once, regardless of how many times the library is called.': function () {
+     var numberOfTimesCallbackHasRun = 0;
+     libSystem('runOnlyOnce', [], function () {
+       numberOfTimesCallbackHasRun++;
+       return 'Hello!';
+      });
+     libSystem('runOnlyOnce');
+     libSystem('runOnlyOnce');
+     libSystem('runOnlyOnce');
+     eq(numberOfTimesCallbackHasRun, 1);
+  },
 
 });
 </script>
