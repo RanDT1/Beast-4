@@ -1,0 +1,140 @@
+<script src="../tinytest.js"></script>
+<script>
+
+//Function Signature:
+//  libSystems(name[, dependancies[, callback]]);
+
+//Return value:
+// returns the library of the name argument.
+
+
+//Callback Parameters:
+// callback(dependancies)
+
+//Description:
+// A function that can create new libraries and store them without them being saved to the window object.
+// Can also be used to retrieve already created libraries stored inside the closure.
+
+
+//Requirments:
+
+//IF ARGUMENTS ARE GREATER THAN ONE:
+// it should return the library requested by the name argument.
+// if the name argument provided is undefined, it should return undefined.
+// if no arguments are provided, it should return undefined.
+
+//IF ARGUMENTS ARE GREATER THAN ONE:
+// if the callback functions returns undefined, the library will be set to undefined.
+// it should set the library to the return value of the callback function.
+
+(function() {
+  var storage = {};
+  var tempStore = {};
+
+  function libSystem(name, dependancies, callback) {
+    if(arguments.length > 1) {
+      var mappedArray = dependancies.map(function(currentEl) {
+        return storage[currentEl];
+      })
+
+      for(var i = 0; i < mappedArray.length; i++) {
+          if(mappedArray[i] === undefined  ){
+            tempStore[name] = {
+              dependancies: dependancies,
+              callback: callback
+            }
+            break;
+          }
+        }
+      if(!tempStore[name]) {
+        storage[name] = callback.apply(null, mappedArray);
+      }
+
+    } else {
+      if(tempStore[name]){
+        var tempCall = tempStore[name].callback;
+        var tempDepend = tempStore[name].dependancies;
+        var mappedDepend = tempDepend.map(function(currentEl) {
+          return storage[currentEl];
+        })
+        storage[name] = tempCall.apply(null,mappedDepend);
+        delete tempStore[name];
+      }
+      return storage[name];
+    }
+  }
+
+window.libSystem = libSystem;
+
+})()
+
+
+tests({
+  'if no arguments are provided, it should return undefined.':function() {
+    var returnedLibrary = libSystem();
+    eq(returnedLibrary, undefined);
+  },
+
+  'if the name argument provided is undefined, it should return undefined.':function() {
+    var returnedLibrary = libSystem('testLib');
+    eq(returnedLibrary, undefined);
+  },
+
+  'it should return the library requested by the name argument.':function() {
+    libSystem('testLib', [], function() {
+      return 'Im here';
+    });
+
+    var returnedLibrary = libSystem('testLib');
+    eq(returnedLibrary, 'Im here');
+  },
+
+  'it should be able to accept an array of dependancies created by libSystem and use them in the callback function':function() {
+    libSystem('dependency', [], function() {
+      return 'loaded dependency';
+    });
+
+     libSystem('app', ['dependency'], function(dependency) {
+      return 'app with ' + dependency;
+    });
+
+    var returnedLibrary = libSystem('app');
+    eq(returnedLibrary, 'app with loaded dependency');
+  },
+
+  'it should be able to accept any number of dependancies':function() {
+    libSystem('car', [], function() {
+      return 'Prius';
+    });
+
+    libSystem('brand', [], function() {
+      return 'Toyota';
+    });
+
+    libSystem('carBrag', ['car', 'brand'], function(car, brand) {
+      return car + ' is made by ' + brand;
+    })
+    var returnedLibrary = libSystem('carBrag');
+    eq(returnedLibrary, 'Prius is made by Toyota');
+  },
+
+  'it should be able to load libraries out of order.':function() {
+    libSystem('workBlurb', ['name', 'company'], function(name, company) {
+      return name + ' works at ' + company;
+    });
+
+    libSystem('name', [], function() {
+      return 'Gordon';
+    });
+
+    libSystem('company', [], function() {debugger;
+      return 'Watch and Code';
+    });
+
+    var returnedLibrary = libSystem('workBlurb');
+    eq(returnedLibrary, 'Gordon works at Watch and Code');
+  },
+
+
+});
+</script>
