@@ -1,0 +1,123 @@
+<script src="../tinytest.js"></script>
+<script>
+
+//Function Signature:
+//  libSystems(name[, dependancies[, callback]]);
+
+//Return value:
+// returns the library of the name argument.
+
+
+//Callback Parameters:
+// callback(dependancies)
+
+//Description:
+// A function that can create new libraries and store them without them being saved to the window object.
+// Can also be used to retrieve already created libraries stored inside the closure.
+
+
+(function() {
+  var storage = {};
+
+  function libSystem(name, dependancies, callback) {
+    if(arguments.length > 1) {
+      storage[name] = {
+        dependancies: dependancies,
+        callback: callback,
+        cached: false
+      };
+    } else {
+      var library = storage[name];
+
+      if(storage[name].cached === false) {
+        var mappedDepend = storage[name].dependancies.map(function(currentEl) {
+          var currentLibrary = storage[currentEl];
+          var currentCallback = currentLibrary.callback;
+          var currentDependancies = currentLibrary.dependancies;
+          currentLibrary.result = currentLibrary.callback.apply(null, currentDependancies)
+          currentLibrary.cached = true;
+          return currentLibrary.result;
+        })
+        library.result = library.callback.apply(null, mappedDepend);
+        library.cached = true;
+      }
+      return library.result;
+    }
+  }
+
+window.libSystem = libSystem;
+
+})()
+
+
+tests({
+
+  'it should return the library requested by the name argument.':function() {
+    libSystem('testLib', [], function() {
+      return 'Im here';
+    });
+
+    var returnedLibrary = libSystem('testLib');
+    eq(returnedLibrary, 'Im here');
+  },
+
+  'it should be able to accept an array of dependancies created by libSystem and use them in the callback function':function() {
+    libSystem('dependency', [], function() {
+      return 'loaded dependency';
+    });
+
+     libSystem('app', ['dependency'], function(dependency) {
+      return 'app with ' + dependency;
+    });
+
+    var returnedLibrary = libSystem('app');
+    eq(returnedLibrary, 'app with loaded dependency');
+  },
+
+  'it should be able to accept any number of dependancies':function() {
+    libSystem('car', [], function() {
+      return 'Prius';
+    });
+
+    libSystem('brand', [], function() {
+      return 'Toyota';
+    });
+
+    libSystem('carBrag', ['car', 'brand'], function(car, brand) {
+      return car + ' is made by ' + brand;
+    })
+    var returnedLibrary = libSystem('carBrag');
+    eq(returnedLibrary, 'Prius is made by Toyota');
+  },
+
+  'it should be able to load libraries out of order.':function() {
+    libSystem('workBlurb', ['name', 'company'], function(name, company) {
+      return name + ' works at ' + company;
+    });
+
+    libSystem('name', [], function() {
+      return 'Gordon';
+    });
+
+    libSystem('company', [], function() {
+      return 'Watch and Code';
+    });
+
+    var returnedLibrary = libSystem('workBlurb');
+    eq(returnedLibrary, 'Gordon works at Watch and Code');
+  },
+
+  'It should only run the callback function for each library once, regardless of how many times the library is called.': function () {
+      var numberOfTimesCallbackHasRun = 0;
+      libSystem('runOnlyOnce', [], function () {
+        numberOfTimesCallbackHasRun++;
+        return 'Hello!';
+      });
+      libSystem('runOnlyOnce');
+      libSystem('runOnlyOnce');
+      libSystem('runOnlyOnce');
+      eq(numberOfTimesCallbackHasRun, 1);
+  },
+
+});
+</script>
